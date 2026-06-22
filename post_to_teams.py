@@ -38,6 +38,7 @@ import sys
 import urllib.error
 import urllib.request
 from datetime import datetime
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo("Europe/Zurich")
@@ -88,6 +89,8 @@ def topic_container(index, topic):
         items.append(_tb(f"**Warum jetzt:** {topic['why']}", spacing="Small"))
     if topic.get("form"):
         items.append(_tb(f"**Storytelling-Form:** {topic['form']}", spacing="Small"))
+    if topic.get("sources"):
+        items.append(sources_line(topic["sources"], spacing="Small"))
     return {
         "type": "Container",
         "style": "emphasis",
@@ -97,10 +100,22 @@ def topic_container(index, topic):
     }
 
 
-def sources_block(sources):
-    links = " · ".join(f"[{i + 1}]({u})" for i, u in enumerate(sources))
-    return _tb(f"**Quellen:** {links}", isSubtle=True, size="Small",
-               separator=True, spacing="Medium")
+def _host(url):
+    try:
+        host = urlsplit(url).netloc or url
+    except Exception:
+        host = url
+    return host[4:] if host.startswith("www.") else host
+
+
+def source_links_md(sources):
+    return " · ".join(f"[{_host(u)}]({u})" for u in sources)
+
+
+def sources_line(sources, **kw):
+    opts = {"isSubtle": True, "size": "Small"}
+    opts.update(kw)
+    return _tb(f"**Quellen:** {source_links_md(sources)}", **opts)
 
 
 def build_structured(data):
@@ -109,7 +124,7 @@ def build_structured(data):
     for i, topic in enumerate(data.get("topics", []), start=1):
         body.append(topic_container(i, topic))
     if data.get("sources"):
-        body.append(sources_block(data["sources"]))
+        body.append(sources_line(data["sources"], separator=True, spacing="Medium"))
     return body
 
 
