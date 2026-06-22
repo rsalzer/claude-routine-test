@@ -33,6 +33,7 @@ Env:
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -40,6 +41,17 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo("Europe/Zurich")
+
+# A text that begins with "22. " is parsed by Teams as an ordered-list item and
+# renumbered to "1.". Inserting a zero-width space between the number and the
+# delimiter breaks that detection while staying visually identical.
+_LEADING_LIST_MARKER = re.compile(r"^(\s*\d+)([.)])(\s)")
+
+
+def md_safe(text):
+    if not text:
+        return text
+    return _LEADING_LIST_MARKER.sub("\\1\u200b\\2\\3", text)
 
 
 def _tb(text, **kw):
@@ -49,9 +61,9 @@ def _tb(text, **kw):
 
 
 def header_blocks(title, subtitle):
-    blocks = [_tb(title, weight="Bolder", size="Large")]
+    blocks = [_tb(md_safe(title), weight="Bolder", size="Large")]
     if subtitle:
-        blocks.append(_tb(subtitle, isSubtle=True, spacing="None"))
+        blocks.append(_tb(md_safe(subtitle), isSubtle=True, spacing="None"))
     return blocks
 
 
@@ -69,7 +81,7 @@ def topic_container(index, topic):
              "items": [_tb(str(index), size="ExtraLarge", weight="Bolder",
                            color="Accent", spacing="None")]},
             {"type": "Column", "width": "stretch", "verticalContentAlignment": "Center",
-             "items": [_tb(topic.get("title", ""), weight="Bolder", size="Medium")]},
+             "items": [_tb(md_safe(topic.get("title", "")), weight="Bolder", size="Medium")]},
         ],
     })
     if topic.get("why"):
@@ -105,7 +117,7 @@ def build_plain(message, title):
     body = header_blocks(title, datetime.now(TZ).strftime("%d.%m.%Y"))
     for line in message.split("\n"):
         if line.strip():
-            body.append(_tb(line, spacing="Small"))
+            body.append(_tb(md_safe(line), spacing="Small"))
     return body
 
 
