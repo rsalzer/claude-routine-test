@@ -1,0 +1,5 @@
+{
+  "permissions": {
+    "allow": ["Bash(python3 post_to_teams.py:*)"]
+  }
+}
